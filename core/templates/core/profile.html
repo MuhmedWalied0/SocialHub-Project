@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SocialHub - Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: #f0f2f5;
+        }
+        .navbar {
+            background: linear-gradient(90deg, #1877f2, #3b5998);
+        }
+        .avatar {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen">
+    <nav class="navbar p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="{% url 'home' %}" class="text-white text-2xl font-bold">SocialHub</a>
+            <div class="space-x-4">
+                <a href="{% url 'home' %}" class="text-white hover:text-gray-200 transition">Home</a>
+                <a href="{% url 'profile' %}" class="text-white hover:text-gray-200 transition">Profile</a>
+                <a href="{% url 'settings' %}" class="text-white hover:text-gray-200 transition">Settings</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'logout' %}" class="text-white hover:text-gray-200 transition">Logout</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="text-white hover:text-gray-200 transition">Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-6 max-w-2xl">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex items-center mb-4">
+                {% if profile.avatar %}
+                    <img src="{{ profile.avatar.url }}" alt="Profile picture" class="avatar mr-3">
+                {% else %}
+                    <i class="fas fa-user-circle text-gray-400 mr-3 text-4xl"></i>
+                {% endif %}
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-800">{{ profile.user.f_name }} {{ profile.user.l_name }}</h2>
+                    <p class="text-gray-600">{{ profile.user.email }}</p>
+                </div>
+            </div>
+            <p class="text-gray-800 mb-4"><strong>Bio:</strong> {{ profile.bio|default:"No bio available" }}</p>
+            <button id="bioBtn" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition mb-4">
+                {% if profile.bio %}Update Bio{% else %}Add Bio{% endif %}
+            </button>
+            <form id="bioForm" method="POST" class="mt-4 hidden">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">Save Bio</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const bioBtn = document.getElementById('bioBtn');
+        const bioForm = document.getElementById('bioForm');
+
+        bioBtn.addEventListener('click', () => {
+            if (bioForm.style.display === 'none' || bioForm.style.display === '') {
+                bioForm.style.display = 'block';
+                bioBtn.style.display = 'none';
+                document.querySelector('#bioForm textarea').focus();
+            }
+        });
+    </script>
+</body>
+</html>
