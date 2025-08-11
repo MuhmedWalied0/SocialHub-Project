@@ -1,7 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
+from datetime import timedelta
+import random
+import string
+from django.db import IntegrityError
 from django_currentuser.middleware import get_current_user
+from django.utils.text import slugify
 
 class UserManager(BaseUserManager):
     def create_user(self, email, f_name, l_name, password=None, **extra_fields):
@@ -20,6 +25,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_active', True)
         return self.create_user(email, f_name, l_name, password, **extra_fields)
 
+
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.AutoField(primary_key=True)
     f_name = models.CharField(max_length=255, null=False)
@@ -37,20 +43,40 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.f_name} {self.l_name}"
+    
+    
+
 
 class Profile(models.Model):
-    id = models.AutoField(primary_key=True)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, unique=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     bio = models.CharField(max_length=100, blank=True)
     avatar = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    slug = models.SlugField(max_length=255, null=True, blank=True)
 
     def __str__(self):
-        return f"Profile of {self.user.email}"
+        return f"{self.user.f_name} {self.user.l_name}'s Profile"
+    
+    @staticmethod
+    def generate_unique_slug(base_slug):
+        slug = base_slug
+        counter = 1
+        while Profile.objects.filter(slug=slug).exists():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        return slug
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(f"{self.user.f_name}-{self.user.l_name}")
+            self.slug = Profile.generate_unique_slug(base_slug)
+        super().save(*args, **kwargs)
+
 
 class Post(models.Model):
     PRIVACY_CHOICES = (
         ('public', 'Public'),
-        ('friend', 'Friend'),
         ('private', 'Private'),
     )
 
@@ -73,6 +99,7 @@ class Post(models.Model):
             return self.postreact_set.filter(user=user).exists()
         return False
 
+
 class Comment(models.Model):
     id = models.AutoField(primary_key=True)
     body = models.TextField(null=False)
@@ -83,6 +110,7 @@ class Comment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.user.email} on post {self.post.id}"
+
 
 class PostReact(models.Model):
     id = models.AutoField(primary_key=True)
@@ -96,10 +124,10 @@ class PostReact(models.Model):
     def __str__(self):
         return f"React by {self.user.email} on post {self.post.id}"
 
+
 class Setting(models.Model):
     PRIVACY_CHOICES = (
         ('public', 'Public'),
-        ('friend', 'Friend'),
         ('private', 'Private'),
     )
 
@@ -112,3 +140,22 @@ class Setting(models.Model):
 
     def __str__(self):
         return f"Settings for {self.user.email}"
+
+
+class EmailVerification(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='email_verification')
+    code = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timedelta(minutes=15)
+
+    def generate_code(self):
+        while True:
+            self.code = ''.join(random.choices(string.digits, k=6))
+            self.created_at = timezone.now()
+            try:
+                self.save()
+                break
+            except IntegrityError:
+                pass

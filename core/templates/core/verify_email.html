@@ -1,0 +1,104 @@
+{% load static %}
+{% load widget_tweaks %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Verify Email - SocialHub</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"rel="stylesheet"/>
+    <link rel="stylesheet" href="{% static 'css/verify_email.css' %}">
+</head>
+<body>
+    <main class="login-container" role="main">
+        <h2><i class="fas fa-envelope-open"></i> Verify Your Email</h2>
+
+        {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible" role="alert">
+            {{ message }}
+            <button
+                type="button"
+                class="btn-close"
+                aria-label="Close"
+                onclick="this.parentElement.style.display='none'"
+            >
+                &times;
+            </button>
+            </div>
+        {% endfor %}
+        {% endif %}
+
+        <p>Please enter the 6-digit verification code sent to your email address.</p>
+
+        <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input
+            type="email"
+            id="email"
+            name="email"
+            class="form-control"
+            placeholder="Enter your email"
+            required
+            autofocus
+            />
+        </div>
+
+        <div class="form-group">
+            <label for="code">Verification Code</label>
+            <input
+            type="text"
+            id="code"
+            name="code"
+            class="form-control"
+            placeholder="000000"
+            maxlength="6"
+            pattern="[0-9]{6}"
+            required
+            />
+            <div class="form-text" style="color:#b0b3b8; font-size:0.9rem; margin-top:0.3rem;">
+            Enter the 6-digit code sent to your email
+            </div>
+        </div>
+
+        <button type="submit" class="btn-primary">
+            <i class="fas fa-check"></i> Verify Email
+        </button>
+        </form>
+
+        <div class="resend-section text-center">
+        <p>Didn't receive the code?</p>
+        <a href="{% url 'resend_verification_code' %}" class="btn-outline-secondary">
+            <i class="fas fa-redo"></i> Resend Code
+        </a>
+        </div>
+
+        <div class="link-buttons">
+        <a href="{% url 'login' %}" class="btn-link">
+            <i class="fas fa-arrow-left"></i> Back to Login
+        </a>
+        </div>
+    </main>
+
+    <script>
+        const codeInput = document.getElementById('code');
+        codeInput.addEventListener('input', function (e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+
+        if (this.value.length === 6) {
+            setTimeout(() => {
+            if (this.value.length === 6) {
+                this.form.submit();
+            }
+            }, 500);
+        }
+        });
+
+        window.addEventListener('load', function () {
+        document.getElementById('email').focus();
+        });
+    </script>
+</body>
+</html>

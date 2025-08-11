@@ -1,0 +1,62 @@
+{% load static %}
+{% load widget_tweaks %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Resend Verification Code - SocialHub</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="{% static 'css/resend_verification_code.css' %}">
+</head>
+<body>
+    <div class="login-container" role="main">
+        <h2><i class="fas fa-paper-plane"></i> Resend Verification Code</h2>
+
+        {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" aria-label="Close" onclick="this.parentElement.style.display='none'">&times;</button>
+            </div>
+        {% endfor %}
+        {% endif %}
+
+        <p>Enter your email address to receive a new verification code.</p>
+
+        <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input
+            type="email"
+            id="email"
+            name="email"
+            class="form-control"
+            placeholder="Enter your email"
+            required
+            autofocus
+            />
+        </div>
+
+        <button type="submit" class="btn-primary">
+            <i class="fas fa-paper-plane"></i> Send New Code
+        </button>
+        </form>
+
+        <div class="note">
+        <i class="fas fa-info-circle"></i>
+        <strong>Note:</strong> The new code will be valid for 15 minutes only.
+        </div>
+
+        <div class="link-buttons">
+        <a href="{% url 'verify_email' %}">
+            <i class="fas fa-check"></i> I have a code
+        </a>
+        <a href="{% url 'login' %}">
+            <i class="fas fa-arrow-left"></i> Back to Login
+        </a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,421 +1,282 @@
+{% load static %}
+{% load widget_tweaks %}
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SocialHub - Home</title>
-    {% load static %}
+    <title>SocialHub - Connect with the World</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
     <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}" />
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background: #f0f2f5;
-        }
-        .navbar {
-            background: linear-gradient(90deg, #1877f2, #3b5998);
-        }
-        .post img {
-            max-height: 400px;
-            object-fit: cover;
-        }
-        .avatar {
-            width: 40px;
-            height: 40px;
-            object-fit: cover;
-            border-radius: 50%;
-        }
-        .like-btn.liked i {
-            color: #ff0000;
-        }
-        
-        /* Modal Styles */
-        #commentsModal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        #commentsModal.active {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        #commentsModal > div {
-            background: white;
-            border-radius: 0.5rem;
-            width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        #modalCommentsList {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1rem;
-        }
-        
-        #modalCommentForm {
-            padding: 1rem;
-            border-top: 1px solid #e5e7eb;
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        #modalCommentInput {
-            flex: 1;
-            padding: 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
-        }
-        
-        #closeCommentsModal {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #6b7280;
-        }
-        
-        #closeCommentsModal:hover {
-            color: #111827;
-        }
-    </style>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/home.css' %}">
 </head>
-<body class="min-h-screen">
+<body>
     <nav class="navbar p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
             <a href="{% url 'home' %}" class="text-white text-2xl font-bold">SocialHub</a>
             <div class="space-x-4">
-                <a href="{% url 'home' %}" class="text-white hover:text-gray-200 transition">Home</a>
-                <a href="{% url 'profile' %}" class="text-white hover:text-gray-200 transition">Profile</a>
-                <a href="{% url 'settings' %}" class="text-white hover:text-gray-200 transition">Settings</a>
-                {% if user.is_authenticated %}
-                    <a href="{% url 'logout' %}" class="text-white hover:text-gray-200 transition">Logout</a>
+                <a href="{% url 'home' %}" class="nav-link text-white hover:text-gray-200 transition">Home</a>
+                <a href="{% url 'current_profile'%}" class="nav-link text-white hover:text-gray-200 transition">Profile</a>
+                <a href="{% url 'settings' %}" class="nav-link text-white hover:text-gray-200 transition">Settings</a>
+                {% if request.user.is_authenticated %}
+                    <a href="{% url 'logout' %}" class="nav-link text-white hover:text-gray-200 transition">Logout</a>
                 {% else %}
-                    <a href="{% url 'login' %}" class="text-white hover:text-gray-200 transition">Login</a>
+                    <a href="{% url 'login' %}" class="nav-link text-white hover:text-gray-200 transition">Login</a>
                 {% endif %}
             </div>
         </div>
     </nav>
 
-    <div class="container mx-auto px-4 py-6 max-w-2xl">
-        {% if user.is_authenticated %}
-            {% with user_setting=user.setting %}
-                <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-                    <button id="createPostBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition flex items-center justify-center">
-                        <i class="fas fa-pen mr-2"></i> What's on your mind?
-                    </button>
-                    <form id="postForm" class="mt-4 hidden" enctype="multipart/form-data" method="POST" action="/api/posts/">
-                        {% csrf_token %}
-                        <textarea id="postText" name="body" placeholder="Write your post here..." required class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                        <div class="flex items-center space-x-4 mt-3">
-                            <input type="file" id="postImage" name="image" accept="image/*" class="flex-1" />
-                            <select name="privacy" class="p-2 border rounded-lg">
-                                <option value="public" {% if user_setting.post_privacy == 'public' %}selected{% endif %}>Public</option>
-                                <option value="friend" {% if user_setting.post_privacy == 'friend' %}selected{% endif %}>Friends</option>
-                                <option value="private" {% if user_setting.post_privacy == 'private' %}selected{% endif %}>Private</option>
-                            </select>
+    <div class="content-wrapper">
+        <div class="container mx-auto px-6 py-8 max-w-2xl relative z-10">
+            {% if user.is_authenticated %}
+                {% with user_setting=user.setting %}
+                    <div class="card mb-8 p-6">
+                        <div class="create-post-trigger" id="createPostTrigger">
+                            <div class="flex items-center space-x-4">
+                                {% if user.profile.avatar %}
+                                    <img src="{{ user.profile.avatar.url }}" alt="Your Avatar" class="avatar" />
+                                {% else %}
+                                    <div class="avatar bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+                                        <i class="fas fa-user text-white text-lg"></i>
+                                    </div>
+                                {% endif %}
+                                <div class="flex-1 text-left">
+                                    <p class="text-gray-500 text-lg">What's on your mind, {{ user.f_name }}?</p>
+                                </div>
+                                <i class="fas fa-plus-circle text-3xl text-blue-500 pulse-animation"></i>
+                            </div>
                         </div>
-                        <button type="submit" class="mt-3 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">Post</button>
-                    </form>
+                        
+                        <form id="postForm" class="mt-6 hidden" enctype="multipart/form-data" method="POST" action="/api/posts/">
+                            {% csrf_token %}
+                            <textarea id="postText" name="body" placeholder="Share your thoughts with the world..." required class="textarea-custom w-full mb-4"></textarea>
+                            <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4 mb-4">
+                                <div class="flex items-center space-x-2 flex-1">
+                                    <i class="fas fa-image text-blue-500 text-xl"></i>
+                                    <input type="file" id="postImage" name="image" accept="image/*" class="input-custom flex-1" />
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-globe text-green-500"></i>
+                                    <select name="privacy" class="input-custom">
+                                        <option value="public" {% if user_setting.post_privacy == 'public' %}selected{% endif %}>
+                                            <i class="fas fa-globe"></i> Public
+                                        </option>
+                                        <option value="private" {% if user_setting.post_privacy == 'private' %}selected{% endif %}>
+                                            <i class="fas fa-lock"></i> Private
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="flex space-x-3">
+                                <button type="submit" class="btn-primary flex-1 relative z-10">
+                                    <i class="fas fa-paper-plane mr-2"></i>Share Post
+                                </button>
+                                <button type="button" id="cancelPostBtn" class="btn-secondary">
+                                    <i class="fas fa-times mr-2"></i>Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                {% endwith %}
+            {% else %}
+                <div class="card mb-8 p-8 text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-users text-6xl text-blue-500 mb-4"></i>
+                        <h2 class="text-2xl font-bold gradient-text mb-2">Join the Conversation</h2>
+                        <p class="text-gray-600 mb-6">Connect with friends and share your amazing moments</p>
+                        <a href="{% url 'login' %}" class="btn-primary inline-block">
+                            <i class="fas fa-sign-in-alt mr-2"></i>Get Started
+                        </a>
+                    </div>
                 </div>
-            {% endwith %}
-        {% else %}
-            <p class="text-center text-gray-600 mb-6">Please <a href="{% url 'login' %}" class="text-blue-600 hover:underline">log in</a> to create a post.</p>
-        {% endif %}
+            {% endif %}
 
-        <div id="postsContainer">
-            {% for item in posts %}
-                <div class="post bg-white rounded-lg shadow-md p-4 mb-6" data-post-id="{{ item.post.id }}">
-                    <div class="meta flex items-center mb-3">
-                        {% if item.post.user.profile.avatar %}
-                            <img src="{{ item.post.user.profile.avatar.url }}" alt="Avatar" class="avatar mr-2" />
-                        {% else %}
-                            <i class="fas fa-user-circle text-gray-400 mr-2 text-2xl"></i>
+            <div id="postsContainer" class="space-y-8">
+                {% for item in posts %}
+                            <div class="card post-card p-6" data-post-id="{{ item.post.id }}" data-animation-delay="{{ forloop.counter0|add:0.1 }}">                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center space-x-3">
+                                <a href="{% if item.post.user == request.user %}{% url 'current_profile' %}{% else %}{% url 'profile' item.post.user.profile.slug %}{% endif %}" class="block">
+                                    {% if item.post.user.profile.avatar %}
+                                        <img src="{{ item.post.user.profile.avatar.url }}" alt="Avatar" class="avatar" />
+                                    {% else %}
+                                        <div class="avatar bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+                                            <i class="fas fa-user text-white text-lg"></i>
+                                        </div>
+                                    {% endif %}
+                                </a>
+                                <div>
+                                    <a href="{% if item.post.user == request.user %}{% url 'current_profile' %}{% else %}{% url 'profile' item.post.user.profile.slug %}{% endif %}" class="username-link text-lg font-semibold block">
+                                        {{ item.post.user.f_name }} {{ item.post.user.l_name }}
+                                    </a>
+                                    <div class="flex items-center space-x-3 text-sm text-gray-500 mt-1">
+                                        <span><i class="fas fa-clock mr-1"></i>{{ item.post.created_at|date:"M d, Y • H:i" }}</span>
+                                        <span class="flex items-center">
+                                            {% if item.post.privacy == 'public' %}
+                                                <i class="fas fa-globe text-green-500 mr-1"></i>Public
+                                            {% else %}
+                                                <i class="fas fa-lock text-orange-500 mr-1"></i>Private
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if user.is_authenticated and item.post.user == user %}
+                            <div class="relative">
+                                <button class="options-btn" data-post-id="{{ item.post.id }}">
+                                    <i class="fas fa-ellipsis-h text-gray-500"></i>
+                                </button>
+                                <div class="options-menu hidden absolute right-0 mt-2 w-36 py-2 z-20">
+                                    <button class="update-btn w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 flex items-center" data-post-id="{{ item.post.id }}">
+                                        <i class="fas fa-edit mr-2 text-blue-500"></i>Update
+                                    </button>
+                                    <button class="delete-btn w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center" data-post-id="{{ item.post.id }}">
+                                        <i class="fas fa-trash mr-2"></i>Delete
+                                    </button>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <p class="post-body text-gray-800 text-lg leading-relaxed">{{ item.post.body }}</p>
+                        </div>
+
+                        {% if item.post.image %}
+                            <div class="mb-4 overflow-hidden rounded-2xl">
+                                <img src="{{ item.post.image.url }}" alt="Post image" class="post-image w-full" />
+                            </div>
                         {% endif %}
-                        <div>
-                            <span class="username text-blue-600 font-semibold">{{ item.post.user.f_name }} {{ item.post.user.l_name }}</span>
-                            <div class="text-gray-500 text-sm">{{ item.post.created_at|date:"m/d/Y H:i" }}</div>
+
+                        <div class="flex items-center space-x-4 pt-4 border-t border-gray-100">
+                            <button class="like-btn {% if item.is_liked %}liked{% endif %} flex items-center space-x-2" data-post-id="{{ item.post.id }}">
+                                <i class="fas fa-heart text-lg"></i>
+                                <span class="like-count font-semibold">{{ item.post.postreact_set.count }}</span>
+                            </button>
+
+                            <button class="comment-btn flex items-center space-x-2" data-post-id="{{ item.post.id }}">
+                                <i class="fas fa-comment text-lg"></i>
+                                <span class="comment-count font-semibold">{{ item.post.comment_set.count }}</span>
+                            </button>
+
+                            <button class="share-btn flex items-center space-x-2 text-gray-600 hover:text-blue-500 transition-colors p-2 rounded-full hover:bg-blue-50">
+                                <i class="fas fa-share text-lg"></i>
+                                <span class="font-semibold">Share</span>
+                            </button>
                         </div>
                     </div>
-                    <p class="text-gray-800 mb-3">{{ item.post.body }}</p>
-                    {% if item.post.image %}
-                        <img src="{{ item.post.image.url }}" alt="Post image" class="w-full rounded-lg mb-3" />
-                    {% endif %}
-                    <div class="flex items-center space-x-4 mb-3">
-                        <button class="like-btn {% if item.is_liked %}liked{% endif %}" data-post-id="{{ item.post.id }}">
-                            <i class="fas fa-heart"></i> <span class="like-count">{{ item.post.postreact_set.count }}</span> Likes
-                        </button>
-
-                        <button class="comments-btn text-blue-600 hover:underline" data-post-id="{{ item.post.id }}">
-                            {{ item.post.comment_set.count }} Comments
-                        </button>
+                {% empty %}
+                    <div class="card p-12 text-center">
+                        <div class="mb-6">
+                            <i class="fas fa-newspaper text-6xl text-gray-300 mb-4"></i>
+                            <h3 class="text-2xl font-semibold text-gray-600 mb-2">No Posts Yet</h3>
+                            <p class="text-gray-500">Be the first to share something amazing!</p>
+                        </div>
+                        {% if user.is_authenticated %}
+                            <button class="btn-primary" onclick="document.getElementById('createPostTrigger').click()">
+                                <i class="fas fa-plus mr-2"></i>Create Your First Post
+                            </button>
+                        {% endif %}
                     </div>
-                </div>
-            {% empty %}
-                <p class="text-center text-gray-600">No public posts available.</p>
-            {% endfor %}
+                {% endfor %}
+            </div>
         </div>
     </div>
 
     <!-- Comments Modal -->
-    <div id="commentsModal">
-        <div class="relative">
-            <button id="closeCommentsModal" aria-label="Close modal">&times;</button>
-            <h3 class="text-xl font-semibold p-4 border-b">Comments</h3>
+    <div id="commentsModal" class="modal">
+        <div class="modal-content">
+            <div class="relative bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-t-2xl">
+                <button class="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors" id="closeCommentsModal">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+                <h3 class="text-2xl font-bold flex items-center">
+                    <i class="fas fa-comments mr-3"></i>Comments
+                </h3>
+            </div>
             
-            <div id="modalCommentsList" class="p-4">
-                <!-- Comments will be loaded here -->
+            <div class="flex-1 overflow-y-auto p-6" id="modalCommentsList">
+                <div class="loading-skeleton h-16 rounded-lg mb-4"></div>
+                <div class="loading-skeleton h-16 rounded-lg mb-4"></div>
+                <div class="loading-skeleton h-16 rounded-lg"></div>
             </div>
 
             {% if user.is_authenticated %}
-            <form id="modalCommentForm" class="p-4">
-                {% csrf_token %}
-                <div class="flex gap-2 w-full">
-                    <input type="text" id="modalCommentInput" name="body" placeholder="Write a comment..." required
-                        class="flex-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />  <!-- استخدمنا flex-1 بدلاً من w-full -->
-                    <button type="submit"
-                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
-                        Comment
-                    </button>
-                </div>
-            </form>
+            <div class="p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+                <form id="modalCommentForm" class="flex space-x-3">
+                    {% csrf_token %}
+                    {% if user.profile.avatar %}
+                        <img src="{{ user.profile.avatar.url }}" alt="Your Avatar" class="w-10 h-10 rounded-full border-2 border-blue-200" />
+                    {% else %}
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center border-2 border-blue-200">
+                            <i class="fas fa-user text-white text-sm"></i>
+                        </div>
+                    {% endif %}
+                    <div class="flex-1 flex space-x-2">
+                        <input type="text" id="modalCommentInput" name="body" placeholder="Write a thoughtful comment..." required
+                            class="input-custom flex-1" />
+                        <button type="submit" class="btn-primary px-6">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
             </div>
-            </form>
             {% else %}
-            <div class="p-4 border-t">
-                <p class="text-gray-500">Please <a href="{% url 'login' %}" class="text-blue-600 hover:underline">log in</a> to comment.</p>
+            <div class="p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl text-center">
+                <p class="text-gray-600 mb-4">Join the conversation!</p>
+                <a href="{% url 'login' %}" class="btn-primary">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Login to Comment
+                </a>
             </div>
             {% endif %}
         </div>
     </div>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // Show/hide post form
-        const createPostBtn = document.getElementById('createPostBtn');
-        const postForm = document.getElementById('postForm');
-        if (createPostBtn && postForm) {
-            createPostBtn.addEventListener('click', () => {
-                postForm.classList.toggle('hidden');
-                createPostBtn.classList.toggle('hidden');
-            });
-        }
+    <!-- Update Post Modal -->
+    <div id="updatePostModal" class="modal">
+        <div class="modal-content">
+            <div class="relative bg-gradient-to-r from-green-500 to-blue-600 text-white p-6 rounded-t-2xl">
+                <button class="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors" id="closeUpdateModal">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+                <h3 class="text-2xl font-bold flex items-center">
+                    <i class="fas fa-edit mr-3"></i>Update Post
+                </h3>
+            </div>
+            <div class="p-6">
+                <form id="updatePostForm" class="space-y-4">
+                    {% csrf_token %}
+                    <textarea name="body" id="updatePostBody" rows="4" class="textarea-custom w-full" placeholder="Edit your thoughts..." required></textarea>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-eye text-blue-500"></i>
+                            <label class="text-gray-700 font-medium">Privacy:</label>
+                        </div>
+                        <select name="privacy" id="updatePostPrivacy" class="input-custom flex-1">
+                            <option value="public">🌍 Public</option>
+                            <option value="private">🔒 Private</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-between items-center pt-4">
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-save mr-2"></i>Save Changes
+                        </button>
+                        <button type="button" id="deletePostFromModal" class="text-red-600 hover:text-red-800 transition-colors font-semibold">
+                            <i class="fas fa-trash mr-2"></i>Delete Post
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-        // Handle post form submission
-        if (postForm) {
-            postForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const formData = new FormData(postForm);
-                const token = document.querySelector('input[name=csrfmiddlewaretoken]').value;
-                
-                try {
-                    const response = await fetch('/api/posts/', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': token,
-                        },
-                        body: formData,
-                    });
-                    
-                    if (response.ok) {
-                        window.location.reload();
-                    } else {
-                        const error = await response.json().catch(() => ({ detail: 'Failed to create post' }));
-                        alert(error.detail || 'Failed to create post');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('An error occurred while creating the post.');
-                }
-            });
-        }
+    <button class="floating-action" id="scrollToTop" title="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
 
-        // Like button functionality
-        document.querySelectorAll('.like-btn').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const postId = this.getAttribute('data-post-id');
-                const token = document.querySelector('input[name=csrfmiddlewaretoken]').value;
-                
-                try {
-                    const response = await fetch(`/api/posts/${postId}/toggle_like/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': token,
-                        },
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        this.classList.toggle('liked', data.liked);
-                        this.querySelector('.like-count').textContent = data.like_count;
-                    } else {
-                        alert('Failed to update like status');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('An error occurred while updating like status');
-                }
-            });
-        });
-
-        // Comments modal functionality
-        const commentsModal = document.getElementById('commentsModal');
-        const modalCommentsList = document.getElementById('modalCommentsList');
-        const modalCommentForm = document.getElementById('modalCommentForm');
-        const modalCommentInput = document.getElementById('modalCommentInput');
-        const closeBtn = document.getElementById('closeCommentsModal');
-        
-        let currentPostId = null;
-
-        // Open modal when clicking comments button
-        document.querySelectorAll('.comments-btn').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                currentPostId = this.getAttribute('data-post-id');
-                commentsModal.classList.add('active');
-                document.body.style.overflow = 'hidden';
-                
-                // Load comments
-                try {
-                    modalCommentsList.innerHTML = '<p class="text-center py-4">Loading comments...</p>';
-                    const response = await fetch(`/api/posts/${currentPostId}/comments/`);
-                    
-                    if (response.ok) {
-                        const comments = await response.json();
-                        
-                        if (comments.length === 0) {
-                            modalCommentsList.innerHTML = '<p class="text-center text-gray-500 py-4">No comments yet</p>';
-                        } else {
-                            modalCommentsList.innerHTML = comments.map(comment => `
-                                <div class="mb-4 pb-4 border-b border-gray-100">
-                                    <div class="flex items-start mb-2">
-                                        ${comment.user.profile?.avatar ? 
-                                            `<img src="${comment.user.profile.avatar.url}" class="w-8 h-8 rounded-full mr-2" alt="User avatar">` : 
-                                            `<i class="fas fa-user-circle text-gray-400 text-2xl mr-2"></i>`
-                                        }
-                                        <div>
-                                            <strong class="text-sm">${comment.user.f_name} ${comment.user.l_name}</strong>
-                                            <p class="text-gray-700 mt-1">${comment.body}</p>
-                                            <small class="text-xs text-gray-400">${new Date(comment.created_at).toLocaleString()}</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            `).join('');
-                        }
-                    } else {
-                        modalCommentsList.innerHTML = '<p class="text-center text-red-500 py-4">Failed to load comments</p>';
-                    }
-                } catch (error) {
-                    console.error('Error loading comments:', error);
-                    modalCommentsList.innerHTML = '<p class="text-center text-red-500 py-4">Error loading comments</p>';
-                }
-            });
-        });
-
-        // Close modal
-        function closeModal() {
-            commentsModal.classList.remove('active');
-            document.body.style.overflow = '';
-            modalCommentsList.innerHTML = '';
-            if (modalCommentInput) modalCommentInput.value = '';
-            currentPostId = null;
-        }
-
-        // Close button
-        if (closeBtn) {
-            closeBtn.addEventListener('click', closeModal);
-        }
-
-        // Close when clicking outside modal
-        commentsModal.addEventListener('click', (e) => {
-            if (e.target === commentsModal) {
-                closeModal();
-            }
-        });
-
-        // Close with Escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && commentsModal.classList.contains('active')) {
-                closeModal();
-            }
-        });
-
-        // Handle comment submission
-        if (modalCommentForm) {
-            modalCommentForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                
-                if (!currentPostId || !modalCommentInput.value.trim()) return;
-                
-                const token = modalCommentForm.querySelector('input[name=csrfmiddlewaretoken]').value;
-                
-                try {
-                    const response = await fetch(`/api/posts/${currentPostId}/comments/`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': token,
-                        },
-                        body: JSON.stringify({ body: modalCommentInput.value.trim() }),
-                    });
-                    
-                    if (response.ok) {
-                        const newComment = await response.json();
-                        
-                        const commentHtml = `
-                            <div class="mb-4 pb-4 border-b border-gray-100">
-                                <div class="flex items-start mb-2">
-                                    ${newComment.user.profile?.avatar ? 
-                                        `<img src="${newComment.user.profile.avatar.url}" class="w-8 h-8 rounded-full mr-2" alt="User avatar">` : 
-                                        `<i class="fas fa-user-circle text-gray-400 text-2xl mr-2"></i>`
-                                    }
-                                    <div>
-                                        <strong class="text-sm">${newComment.user.f_name} ${newComment.user.l_name}</strong>
-                                        <p class="text-gray-700 mt-1">${newComment.body}</p>
-                                        <small class="text-xs text-gray-400">${new Date(newComment.created_at).toLocaleString()}</small>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        
-                        if (modalCommentsList.firstChild?.classList?.contains('text-gray-500')) {
-                            modalCommentsList.innerHTML = commentHtml;
-                        } else {
-                            modalCommentsList.insertAdjacentHTML('afterbegin', commentHtml);
-                        }
-                        
-                        modalCommentInput.value = '';
-                    } else {
-                        const error = await response.json().catch(() => ({ detail: 'Failed to post comment' }));
-                        alert(error.detail || 'Failed to post comment');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('An error occurred while posting the comment');
-                }
-            });
-        }
-    });
-    </script>
+    <script src="{% static 'js/home.js' %}"></script>
 </body>
 </html>

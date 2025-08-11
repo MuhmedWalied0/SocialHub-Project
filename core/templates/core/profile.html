@@ -1,81 +1,227 @@
+{% load static %}
+{% load widget_tweaks %}
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SocialHub - Profile</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background: #f0f2f5;
-        }
-        .navbar {
-            background: linear-gradient(90deg, #1877f2, #3b5998);
-        }
-        .avatar {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 50%;
-        }
-    </style>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    {% load static %}
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/profile.css' %}">
 </head>
 <body class="min-h-screen">
     <nav class="navbar p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
             <a href="{% url 'home' %}" class="text-white text-2xl font-bold">SocialHub</a>
             <div class="space-x-4">
-                <a href="{% url 'home' %}" class="text-white hover:text-gray-200 transition">Home</a>
-                <a href="{% url 'profile' %}" class="text-white hover:text-gray-200 transition">Profile</a>
-                <a href="{% url 'settings' %}" class="text-white hover:text-gray-200 transition">Settings</a>
-                {% if user.is_authenticated %}
-                    <a href="{% url 'logout' %}" class="text-white hover:text-gray-200 transition">Logout</a>
+                <a href="{% url 'home' %}" class="nav-link text-white hover:text-gray-200 transition">Home</a>
+                <a href="{% url 'current_profile'%}" class="nav-link text-white hover:text-gray-200 transition">Profile</a>
+                <a href="{% url 'settings' %}" class="nav-link text-white hover:text-gray-200 transition">Settings</a>
+                {% if request.user.is_authenticated %}
+                    <a href="{% url 'logout' %}" class="nav-link text-white hover:text-gray-200 transition">Logout</a>
                 {% else %}
-                    <a href="{% url 'login' %}" class="text-white hover:text-gray-200 transition">Login</a>
+                    <a href="{% url 'login' %}" class="nav-link text-white hover:text-gray-200 transition">Login</a>
                 {% endif %}
             </div>
         </div>
     </nav>
 
-    <div class="container mx-auto px-4 py-6 max-w-2xl">
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="container mx-auto px-4 py-6 max-w-2xl content-wrapper">
+        <!-- Profile Info Card -->
+        <div class="card p-6 mb-6">
             <div class="flex items-center mb-4">
                 {% if profile.avatar %}
-                    <img src="{{ profile.avatar.url }}" alt="Profile picture" class="avatar mr-3">
+                    <img src="{{ profile.avatar.url }}" alt="Profile picture" class="avatar mr-3" />
                 {% else %}
                     <i class="fas fa-user-circle text-gray-400 mr-3 text-4xl"></i>
                 {% endif %}
                 <div>
-                    <h2 class="text-xl font-semibold text-gray-800">{{ profile.user.f_name }} {{ profile.user.l_name }}</h2>
-                    <p class="text-gray-600">{{ profile.user.email }}</p>
+                    <h2 class="text-xl font-semibold text-gray-800 username-link">{{ user.f_name }} {{ user.l_name }}</h2>
+                    <p class="text-gray-600">{{ user.email }}</p>
                 </div>
             </div>
-            <p class="text-gray-800 mb-4"><strong>Bio:</strong> {{ profile.bio|default:"No bio available" }}</p>
-            <button id="bioBtn" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition mb-4">
-                {% if profile.bio %}Update Bio{% else %}Add Bio{% endif %}
-            </button>
-            <form id="bioForm" method="POST" class="mt-4 hidden">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">Save Bio</button>
-            </form>
+            
+            <!-- Bio Display -->
+            <div id="bioDisplay" class="mb-4">
+                <p ><strong>Bio:</strong> <span id="bioText">{{ profile.bio|default:"No bio available" }}</span></p>
+            </div>
+            
+            {% if is_owner %}
+                <div class="flex space-x-4 mb-4">
+                    <button id="bioBtn" class="btn-primary">
+                        {% if profile.bio %}Update Bio{% else %}Add Bio{% endif %}
+                    </button>
+                    <button id="changePasswordBtn" class="btn-primary">Change Password</button>
+                </div>
+                
+                <!-- Bio Form (Hidden by default) -->
+                <form id="bioForm" method="POST" class="mt-4 hidden">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label for="bioTextarea" class="block text-gray-700 mb-2 font-semibold">Bio</label>
+                        <textarea 
+                            id="bioTextarea" 
+                            name="bio" 
+                            class="input-custom resize-none" 
+                            rows="4" 
+                            placeholder="Tell us about yourself..."
+                            maxlength="500">{{ profile.bio|default:"" }}</textarea>
+                        <p class="text-gray-500 text-sm mt-1">Maximum 500 characters</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button type="submit" class="btn-primary">Save Bio</button>
+                        <button type="button" id="cancelBioBtn" class="btn-secondary">Cancel</button>
+                    </div>
+                </form>
+            {% endif %}
         </div>
+
+        {% if is_private and not is_owner %}
+            <p class="text-red-600 font-semibold mb-4">This account is private and you cannot see posts or other details.</p>
+        {% endif %}
+
+        {% if not is_private or is_owner %}
+            <h3 class="text-xl font-semibold mb-4 gradient-text">Posts</h3>
+            {% if posts %}
+                {% for post in posts %}
+                    <div class="post-card card p-4 mb-6" data-post-id="{{ post.id }}">
+                        <div class="meta flex items-center mb-3 justify-between">
+                            <div class="flex items-center">
+                                <a href="{% if post.user == request.user %}{% url 'current_profile' %}{% else %}{% url 'profile' post.user.profile.slug %}{% endif %}" class="flex items-center">
+                                    {% if post.user.profile.avatar %}
+                                        <img src="{{ post.user.profile.avatar.url }}" alt="Avatar" class="avatar mr-2" style="width: 40px; height: 40px;" />
+                                    {% else %}
+                                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center border-2 border-blue-200 flex-shrink-0 mr-2">
+                                            <i class="fas fa-user text-white text-sm"></i>
+                                        </div>
+                                    {% endif %}
+                                    <span class="username-link">{{ post.user.f_name }} {{ post.user.l_name }}</span>
+                                </a>
+                                <div class="ml-3 flex items-center space-x-3 text-gray-500 text-sm">
+                                    <span>{{ post.created_at|date:"m/d/Y H:i" }}</span>
+                                    <span class="privacy-indicator">
+                                        {% if post.privacy == 'public' %}
+                                            <i class="fas fa-globe text-green-500 mr-1"></i>Public
+                                        {% else %}
+                                            <i class="fas fa-lock text-orange-500 mr-1"></i>Private
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            {% if user.is_authenticated and post.user == user %}
+                                <div class="relative inline-block text-left">
+                                    <button class="options-btn text-gray-500 hover:text-gray-700" data-post-id="{{ post.id }}">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <div class="options-menu hidden absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-10">
+                                        <button class="update-btn block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg" data-post-id="{{ post.id }}">
+                                            <i class="fas fa-edit mr-2"></i>Update
+                                        </button>
+                                        <button class="delete-btn block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 rounded-b-lg" data-post-id="{{ post.id }}">
+                                            <i class="fas fa-trash mr-2"></i>Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="post-body text-gray-800 mb-3">{{ post.body }}</div>
+                        
+                        {% if post.image %}
+                            <img src="{{ post.image.url }}" alt="Post image" class="post-image w-full mb-3 rounded-lg shadow-sm" />
+                        {% endif %}
+                        
+                        <div class="flex items-center space-x-6 pt-3 border-t border-gray-100">
+                            {% if user.is_authenticated %}
+                                <button class="like-btn flex items-center space-x-2 text-gray-600 hover:text-red-500 transition-colors {% if post.is_liked %}liked text-red-500{% endif %}" data-post-id="{{ post.id }}">
+                                    <i class="fas fa-heart"></i>
+                                    <span class="like-count">{{ post.postreact_set.count }}</span>
+                                    <span>Likes</span>
+                                </button>
+                                
+                                <button class="comment-btn flex items-center space-x-2 text-gray-600 hover:text-blue-500 transition-colors" data-post-id="{{ post.id }}">
+                                    <i class="fas fa-comment"></i>
+                                    <span class="comment-count">{{ post.comment_set.count }}</span>
+                                    <span>Comments</span>
+                                </button>
+                                
+                                <button class="share-btn flex items-center space-x-2 text-gray-600 hover:text-green-500 transition-colors" data-post-id="{{ post.id }}">
+                                    <i class="fas fa-share"></i>
+                                    <span>Share</span>
+                                </button>
+                            {% else %}
+                                <div class="flex items-center space-x-6 text-gray-500">
+                                    <span class="flex items-center space-x-2">
+                                        <i class="fas fa-heart"></i>
+                                        <span>{{ post.postreact_set.count }} Likes</span>
+                                    </span>
+                                    <span class="flex items-center space-x-2">
+                                        <i class="fas fa-comment"></i>
+                                        <span>{{ post.comment_set.count }} Comments</span>
+                                    </span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-12">
+                    <i class="fas fa-file-alt text-6xl text-gray-300 mb-4"></i>
+                    <h4 class="text-xl font-semibold text-gray-600 mb-2">No posts yet</h4>
+                    <p class="text-gray-500">
+                        {% if is_owner %}
+                            <a href="{% url 'home' %}" class="text-blue-500 hover:text-blue-600">Create your first post</a>
+                        {% else %}
+                            This user hasn't posted anything yet.
+                        {% endif %}
+                    </p>
+                </div>
+            {% endif %}
+        {% endif %}
+
+        <!-- Change Password Modal -->
+        {% if is_owner %}
+        <div id="changePasswordModal" class="modal">
+            <div class="modal-content">
+                <div class="relative bg-gradient-to-r from-purple-500 to-pink-600 text-white p-6 rounded-t-2xl">
+                    <button id="closeChangePasswordModal" class="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                    <h3 class="text-2xl font-bold flex items-center">
+                        <i class="fas fa-key mr-3"></i>Change Password
+                    </h3>
+                </div>
+                <div class="p-6">
+                    <div id="passwordError" class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded hidden"></div>
+                    <form id="changePasswordForm">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label for="currentPassword" class="block text-gray-700 mb-2 font-semibold">Current Password</label>
+                            <input type="password" id="currentPassword" name="current_password" class="input-custom w-full" required />
+                        </div>
+                        <div class="mb-4">
+                            <label for="newPassword" class="block text-gray-700 mb-2 font-semibold">New Password</label>
+                            <input type="password" id="newPassword" name="new_password" class="input-custom w-full" required />
+                            <p class="text-gray-500 text-sm mt-1">Password must be at least 8 characters long</p>
+                        </div>
+                        <div class="mb-6">
+                            <label for="confirmNewPassword" class="block text-gray-700 mb-2 font-semibold">Confirm New Password</label>
+                            <input type="password" id="confirmNewPassword" name="confirm_new_password" class="input-custom w-full" required />
+                        </div>
+                        <button type="submit" id="changePasswordSubmit" class="btn-primary w-full">
+                            <span id="submitText">Change Password</span>
+                            <span id="loadingText" class="hidden"><i class="fas fa-spinner fa-spin mr-2"></i>Changing Password...</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
-    <script>
-        const bioBtn = document.getElementById('bioBtn');
-        const bioForm = document.getElementById('bioForm');
-
-        bioBtn.addEventListener('click', () => {
-            if (bioForm.style.display === 'none' || bioForm.style.display === '') {
-                bioForm.style.display = 'block';
-                bioBtn.style.display = 'none';
-                document.querySelector('#bioForm textarea').focus();
-            }
-        });
-    </script>
+    <script src="{% static 'js/profile.js' %}"></script>
 </body>
 </html>
